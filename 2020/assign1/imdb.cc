@@ -33,13 +33,13 @@ imdb::~imdb() {
 // 2. 2字节短整数：该演员一共演了多少部电影；如果前面总字节不是4的倍数，补两个空字符对齐4字节
 // 3. 一串4字节偏移数字：每个数字指向movieFile里某部电影的位置，代表他参演的影片
 
-const actor imdb::getActor(const u32 index) const {
-    if (index >= maxActorCount) {
-        throw std::out_of_range("index out of range");
+actor imdb::getActorWithOffset(const u32 offset) const {
+    if (offset >= actorInfo.fileSize) {
+        throw std::out_of_range("offset out of range");
     }
     const void* base = actorBase;
-    const u32 nameOffset = *as<u32>(base, index + 1);
-    string_view name(as<char>(base, nameOffset));
+    const u32 nameOffset = offset;
+    string name(as<char>(base, nameOffset));
     const u32 movieCountOffset = alignUp(nameOffset + static_cast<u32>(name.size()) + 1, 2);
     const u16 movieCount = *as<u16>(as<u8>(base, movieCountOffset));
     const u32 movieCountValuesOffset = alignUp(movieCountOffset + 2, 4);
@@ -48,7 +48,14 @@ const actor imdb::getActor(const u32 index) const {
         movieOffsets.push_back(*as<u32>(as<u8>(base, movieCountValuesOffset), j));
     }
 
-    return actor { name, movieCount, std::move(movieOffsets) };
+    return actor { std::move(name), movieCount, std::move(movieOffsets) };
+}
+
+actor imdb::getActor(const u32 index) const {
+    if (index >= maxActorCount) {
+        throw std::out_of_range("index out of range");
+    }
+    return getActorWithOffset(getItemOffset(actorBase, index));
 }
 
 // ### （2）单条电影记录二进制格式
@@ -57,12 +64,12 @@ const actor imdb::getActor(const u32 index) const {
 // 3. 2字节短整数：这部电影有多少演员；按需补空字符4字节对齐
 // 4. 一串4字节偏移数字：每个指向actorFile里一位演员，代表本片全部演员
 
-const film imdb::getFilm(const u32 index) const {
-    if (index >= maxMovieCount) {
-        throw std::out_of_range("index out of range");
+film imdb::getFilmWithOffset(const u32 offset) const { 
+    if (offset >= movieInfo.fileSize) {
+        throw std::out_of_range("offset out of range");
     }
     const void* base = movieBase;
-    const u32 titleOffset = *as<u32>(base, index + 1);
+    const u32 titleOffset = offset;
     string title(as<char>(base, titleOffset));
 
     const u32 yearOffset = titleOffset + static_cast<u32>(title.size()) + 1;
@@ -73,29 +80,67 @@ const film imdb::getFilm(const u32 index) const {
 
     const u32 actorValueOffset = alignUp(actorCountOffset + 2, 4);
     std::vector<u32> actorOffsets;
-    // for (u16 j = 0; j < actorCount; j++) {
-    //     std::cout << std::showbase << std::hex << *as<u32>(as<u8>(base, actorValueOffset), j) << std::endl;
-    // }
+    for (u16 j = 0; j < actorCount; j++) {
+        u32 actorOffset = *as<u32>(as<u8>(base, actorValueOffset), j);
+        actorOffsets.push_back(actorOffset);
+        // std::cout << getActorWithOffset(actorOffset) << std::endl;
+    }
 
-    return film { title, year };
+    return film { std::move(title), year, actorCount, std::move(actorOffsets) };
+}
+
+film imdb::getFilm(const u32 index) const {
+    if (index >= maxMovieCount) {
+        throw std::out_of_range("index out of range");
+    }
+    return getFilmWithOffset(getItemOffset(movieBase, index));
 }
 
 bool imdb::getCredits(const string& player, vector<film>& films) const { 
-    for (uint32_t i = 0; i < 4; i++) {
-        // std::cout << getActor(i) << std::endl;
-        std::cout << getFilm(i) << std::endl;
+    auto begin = getItemOffsetPtr(actorBase, 0);
+    auto end = getItemOffsetPtr(actorBase, maxActorCount);
+    auto it = std::lower_bound(begin, end, player, [this](const u32& offset1, const string& player) {
+        return getActorWithOffset(offset1).name < player;
+    });
+    if (it == end) {
+        return false;
     }
-
-
-    return false; 
+    actor a = getActorWithOffset(*it);
+    if (a.name != player) {
+        return false;
+    }
+    for (const auto& offset : a.movies) {
+        films.push_back(getFilmWithOffset(offset));
+    }
+    return true;
 }
 
 bool imdb::getCast(const film& movie, vector<string>& players) const {
+    auto begin = getItemOffsetPtr(movieBase, 0);
+    auto end = getItemOffsetPtr(movieBase, maxMovieCount);
+    auto it = std::lower_bound(begin, end, movie, [this](const u32& offset1, const film& movie) {
+        return getFilmWithOffset(offset1) < movie;
+    });
+    if (it == end) {
+        return false;
+    }
+    film m = getFilmWithOffset(*it);
+    if (!(m == movie)) {
+        return false;
+    }
+    for (const auto& offset : m.actors) {
+        players.push_back(getActorWithOffset(offset).name);
+    }
 
+    return true;
+}
 
+u32 imdb::getItemOffset(const void* base, const u32 index) {
+    return *getItemOffsetPtr(base, index);
+}
 
-
-    return false;
+const u32* imdb::getItemOffsetPtr(const void* base, const u32 index) {
+    return as<u32>(base, index + 1);
 }
 
 const void *imdb::acquireFileMap(const string& fileName, struct fileInfo& info) {

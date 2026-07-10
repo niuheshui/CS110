@@ -85,8 +85,10 @@ class imdb {
   const void *movieBase;
   const u32 maxMovieCount;
 
-  const actor getActor(const u32 index) const;
-  const film getFilm(const u32 index) const;
+  actor getActor(const u32 index) const;
+  actor getActorWithOffset(const u32 offset) const;
+  film getFilm(const u32 index) const;
+  film getFilmWithOffset(const u32 offset) const;
   
   // everything below here is complicated and needn't be touched.
   // you're free to investigate, but you're on your own.
@@ -96,6 +98,8 @@ class imdb {
     const void *fileMap;
   } actorInfo, movieInfo;
   
+  static u32 getItemOffset(const void* base, const u32 index);
+  static const u32* getItemOffsetPtr(const void* base, const u32 index);
   static const void *acquireFileMap(const std::string& fileName, struct fileInfo& info);
   static void releaseFileMap(struct fileInfo& info);
 

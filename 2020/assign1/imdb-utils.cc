@@ -23,6 +23,16 @@ std::ostream& operator<<(std::ostream& os, const actor& actor) {
 std::ostream& operator<<(std::ostream& os, const film& film) {
     os << "{title: " << film.title
        << ", year: " << film.year
-       << "}";
+       << ", actors: [";
+    bool first = true;
+    for (const auto& actor : film.actors) {
+        if (!first) {
+            os << ", ";
+        } else {
+            first = false;
+        }
+        os << actor;
+    }
+    os << "]}";
     return os;
 }

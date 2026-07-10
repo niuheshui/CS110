@@ -32,6 +32,8 @@ struct film {
   
   std::string title;
   int year;
+  u32 actorCount;
+  std::vector<u32> actors;
   
   /** 
    * Methods: operator==
@@ -60,7 +62,7 @@ struct film {
 };
 
 struct actor {
-  std::string_view name;
+  std::string name;
   u16 movieCount;
   std::vector<u32> movies;
 
