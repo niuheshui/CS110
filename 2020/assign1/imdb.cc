@@ -125,7 +125,7 @@ bool imdb::getCast(const film& movie, vector<string>& players) const {
         return false;
     }
     film m = getFilmWithOffset(*it);
-    if (!(m == movie)) {
+    if (m != movie) {
         return false;
     }
     for (const auto& offset : m.actors) {

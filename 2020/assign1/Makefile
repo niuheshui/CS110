@@ -1,6 +1,6 @@
 # CS110 search Makefile Hooks
 
-PROGS = search imdbtest
+PROGS = search imdbtest generator
 CXX = /usr/bin/g++
 
 # 	-Wconversion 
@@ -8,20 +8,20 @@ CXX = /usr/bin/g++
 # 	-Wold-style-cast 
 CXX_WARNINGS = -Wall \
 	-Wextra \
-	-Wno-unused-parameter \
-	-Wno-unused-variable \
 	-Wpedantic \
 	-Wnull-dereference \
 	-Woverloaded-virtual \
 	-Wnon-virtual-dtor \
 	-Wshadow \
-	-Werror
+	-Werror \
+	-Wno-error=unused-parameter \
+	-Wno-error=unused-variable 
 
 CXX_DEPS = -MMD -MF $(@:.o=.d)
 CXX_DEFINES =
 CXX_INCLUDES = -I../extra/include
 
-CXXFLAGS = -g $(CXX_WARNINGS) -O0 -std=c++0x $(CXX_DEPS) $(CXX_DEFINES) $(CXX_INCLUDES)
+CXXFLAGS = -g $(CXX_WARNINGS) -O0 -std=c++20 $(CXX_DEPS) $(CXX_DEFINES) $(CXX_INCLUDES)
 LDFLAGS = 
 
 LIB_SRC = imdb.cc path.cc imdb-utils.cc
@@ -43,6 +43,9 @@ $(LIB): $(LIB_OBJ)
 	ar r $@ $^
 	ranlib $@
 
+compile_commands.json: 
+	compiledb make -Bn
+
 clean::
 	rm -f $(PROGS) $(PROGS_OBJ) $(PROGS_DEP)
 	rm -f $(LIB) $(LIB_OBJ) $(LIB_DEP)
@@ -50,6 +53,6 @@ clean::
 spartan:: clean
 	\rm -fr *~
 
-.PHONY: all clean spartan
+.PHONY: all clean spartan compile_commands.json
 
 -include $(PROGS_DEP) $(LIB_DEP) $(LIB_DEP)

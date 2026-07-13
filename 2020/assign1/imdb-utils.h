@@ -50,15 +50,20 @@ struct film {
    *         between receiving object and argument are met.
    */
 
+  std::strong_ordering operator<=>(const film& rhs) const {
+    if (this->title < rhs.title) {
+      return std::strong_ordering::less;
+    }
+    if (this->title > rhs.title) {
+      return std::strong_ordering::greater;
+    }
+    return this->year <=> rhs.year;
+  }
+
   bool operator==(const film& rhs) const { 
     return this->title == rhs.title && (this->year == rhs.year); 
   }
   
-  bool operator<(const film& rhs) const { 
-    return 
-      (this->title < rhs.title) || 
-      (this->title == rhs.title && this->year < rhs.year);
-  }
 };
 
 struct actor {
@@ -66,13 +71,14 @@ struct actor {
   u16 movieCount;
   std::vector<u32> movies;
 
+  std::strong_ordering operator<=>(const actor& rhs) const { 
+    return this->name <=> rhs.name;
+  }
+
   bool operator==(const actor& rhs) const { 
     return this->name == rhs.name;
   }
-  
-  bool operator<(const actor& rhs) const { 
-    return this->name < rhs.name;
-  }
+
 };
 
 std::ostream& operator<<(std::ostream& os, const actor& actor);
