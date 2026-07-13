@@ -1,5 +1,10 @@
+#include <queue>
+#include <unordered_set>
 #include <vector>
+#include <set>
 #include <iostream>
+#include "path.h"
+#include "imdb-utils.h"
 #include "imdb.h"
 
 using namespace std;
@@ -20,10 +25,8 @@ int main(int argc, char *argv[]) {
         return kWrongArgumentCount;
     }
 
-    string actor1Name = argv[1];
-    string actor2Name = argv[2];
-
-    cout << actor1Name << " -> " << actor2Name << endl;
+    string startActorName = argv[1];
+    string targetActorName = argv[2];
 
     imdb db(kIMDBDataDirectory);
     if (!db.good()) {
@@ -31,5 +34,52 @@ int main(int argc, char *argv[]) {
         return kDatabaseNotFound;
     }
 
-    return 0;
+    std::unordered_set<string> visitedActors;
+    std::set<film> visitedFilms;
+    std::queue<std::pair<string, path>> actorQueue;
+    actorQueue.push({startActorName, path(startActorName)});
+    visitedActors.insert(startActorName);
+    size_t depth = 0;
+
+    while (!actorQueue.empty() && depth < 7) {
+        size_t size = actorQueue.size();
+
+        for (size_t i = 0; i < size; i++) {
+            std::pair<string, path> currentState = std::move(actorQueue.front());
+            actorQueue.pop();
+            const string& currentActor = currentState.first;
+            const path& currentPath = currentState.second;
+
+            std::vector<film> films;
+            db.getCredits(currentActor, films);
+
+            for (const auto& film : films) {
+                if (visitedFilms.find(film) != visitedFilms.end()) {
+                    continue;
+                }
+                visitedFilms.insert(film);
+                std::vector<std::string> actors;
+                db.getCast(film, actors);
+                for (const auto& actor : actors) {
+                    path newPath = currentPath;
+                    newPath.addConnection(film, actor);
+                    if (actor == targetActorName) {
+                        cout << newPath << endl;
+                        return 0;
+                    }
+                    if (visitedActors.find(actor) != visitedActors.end()) {
+                        continue;
+                    }
+                    visitedActors.insert(actor);
+                    actorQueue.push({actor, std::move(newPath)});
+                }
+            }
+        }
+
+        depth++;
+    }
+
+    cout << "No path between those two people could be found." << endl;
+
+    return 1;
 }

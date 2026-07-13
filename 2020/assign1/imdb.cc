@@ -83,7 +83,6 @@ film imdb::getFilmWithOffset(const u32 offset) const {
     for (u16 j = 0; j < actorCount; j++) {
         u32 actorOffset = *as<u32>(as<u8>(base, actorValueOffset), j);
         actorOffsets.push_back(actorOffset);
-        // std::cout << getActorWithOffset(actorOffset) << std::endl;
     }
 
     return film { std::move(title), year, actorCount, std::move(actorOffsets) };
