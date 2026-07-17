@@ -2,11 +2,24 @@
 CC = gcc
 PROG =  diskimageaccess
 
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+    # macOS
+    OPENSSL_PREFIX := $(shell brew --prefix openssl)
+    CFLAGS += -I$(OPENSSL_PREFIX)/include
+    LDFLAGS += -L$(OPENSSL_PREFIX)/lib
+else ifeq ($(UNAME_S),Linux)
+    # Linux 使用系统 OpenSSL
+    CFLAGS +=
+    LDFLAGS +=
+endif
+
 LIB_SRC  = diskimg.c inode.c unixfilesystem.c directory.c pathname.c  chksumfile.c file.c 
 DEPS = -MMD -MF $(@:.o=.d)
-WARNINGS = -fstack-protector -Wall -W -Wcast-qual -Wwrite-strings -Wextra -Wno-unused -Wno-unused-parameter
+WARNINGS = -fstack-protector -Wall -W -Wcast-qual -Wwrite-strings -Wextra
 
-CFLAGS += -g $(WARNINGS) $(DEPS) -std=gnu99
+CFLAGS += -g $(WARNINGS) $(DEPS) -std=gnu99 -DDEBUG
 
 LIB_OBJ = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(LIB_SRC)))
 LIB_DEP = $(patsubst %.o,%.d,$(LIB_OBJ))
@@ -32,10 +45,15 @@ $(LIB): $(LIB_OBJ)
 	ar r $@ $^
 	ranlib $@
 
+basic_disk_image: $(PROG)
+	./$(PROG) -i slink/testdisks/basicDiskImage
+
+compile_commands.json:
+	compiledb make -Bn
+
 clean::
 	rm -f $(PROG) $(PROG_OBJ) $(PROG_DEP)
 	rm -f $(LIB) $(LIB_DEP) $(LIB_OBJ)
 
-.PHONY: all clean 
-
+.PHONY: all clean compile_commands.json basic_disk_image
 -include $(LIB_DEP) $(PROG_DEP)
