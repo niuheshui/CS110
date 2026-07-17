@@ -10,6 +10,7 @@
 #define INDIR_ADDR 7
 #define INODE_SIZE sizeof(struct inode)
 #define INODES_PER_SECTOR (DISKIMG_SECTOR_SIZE / INODE_SIZE)
+#define INDIRECT_BLOCK_NUM (DISKIMG_SECTOR_SIZE / sizeof(uint16_t))
 
 int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
   if (inumber < 1) {
@@ -22,46 +23,44 @@ int inode_iget(struct unixfilesystem *fs, int inumber, struct inode *inp) {
     return -1;
   }
 
-  int inode_block = SUPERBLOCK_SECTOR + 1 + ((inumber - 1) / INODES_PER_SECTOR);
-  struct inode INODE_BUFFER[INODES_PER_SECTOR];
-  int result = diskimg_readsector(fs->dfd, inode_block, INODE_BUFFER);
-  if (result < 0) {
-    fprintf(stderr, "inode_iget: diskimg_readsector failed for inumber %d\n", inumber);
+  int sector = SUPERBLOCK_SECTOR + 1 + ((inumber - 1) / INODES_PER_SECTOR);
+  struct inode buf[INODES_PER_SECTOR];
+  if (diskimg_readsector(fs->dfd, sector, buf) < 0) {
     return -1;
   }
-
-  int inode_index = (inumber - 1) % INODES_PER_SECTOR;
-  memcpy(inp, &INODE_BUFFER[inode_index], sizeof(struct inode));
+  *inp = buf[(inumber - 1) % INODES_PER_SECTOR];
 
   return 1;
 }
-
-
-#define INDIRECT_BLOCK_NUM (DISKIMG_SECTOR_SIZE / sizeof(uint16_t))
 
 int inode_indexlookup(struct unixfilesystem *fs, struct inode *inp, int blockNum) {
   int is_small_file = ((inp->i_mode & ILARG) == 0);
   if (is_small_file) {
     return inp->i_addr[blockNum];
   }
-  // TODO: index range check
 
-  uint16_t BLOCK_BUF[INDIRECT_BLOCK_NUM];
+  int file_size = inode_getsize(inp);
+  if (blockNum > (file_size / DISKIMG_SECTOR_SIZE)) {
+    fprintf(stderr, "inode_indexlookup: blockNum %d is out of range\n", blockNum);
+    return -1;
+  }
+
+  uint16_t buf[INDIRECT_BLOCK_NUM];
   if (blockNum < (INDIRECT_BLOCK_NUM * INDIR_ADDR)) {
-    if (diskimg_readsector(fs->dfd, inp->i_addr[blockNum / INDIRECT_BLOCK_NUM], BLOCK_BUF) < 0) {
+    if (diskimg_readsector(fs->dfd, inp->i_addr[blockNum / INDIRECT_BLOCK_NUM], buf) < 0) {
       return -1;
     }
-    return BLOCK_BUF[blockNum % INDIRECT_BLOCK_NUM];
+    return buf[blockNum % INDIRECT_BLOCK_NUM];
   } else {
-    if (diskimg_readsector(fs->dfd, inp->i_addr[INDIR_ADDR], BLOCK_BUF) < 0) {
+    if (diskimg_readsector(fs->dfd, inp->i_addr[INDIR_ADDR], buf) < 0) {
       return -1;
     }
     blockNum -= INDIRECT_BLOCK_NUM * INDIR_ADDR;
-    int second_sector = BLOCK_BUF[blockNum / INDIRECT_BLOCK_NUM];
-    if (diskimg_readsector(fs->dfd, second_sector, BLOCK_BUF) < 0) {
+    int second_sector = buf[blockNum / INDIRECT_BLOCK_NUM];
+    if (diskimg_readsector(fs->dfd, second_sector, buf) < 0) {
       return -1;
     }
-    return BLOCK_BUF[blockNum % INDIRECT_BLOCK_NUM];
+    return buf[blockNum % INDIRECT_BLOCK_NUM];
   }
 
 }

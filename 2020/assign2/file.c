@@ -6,7 +6,6 @@
 #include "inode.h"
 #include "diskimg.h"
 
-// remove the placeholder implementation and replace with your own
 int file_getblock(struct unixfilesystem *fs, int inumber, int blockNum, void *buf) {
   struct inode inp;
   if (inode_iget(fs, inumber, &inp) < 0) {

@@ -1,6 +1,8 @@
 # CS110 Assignment 2 Makefile
 CC = gcc
 PROG =  diskimageaccess
+DIFF = diff --color=always -u
+# DIFF = qoder -d
 
 UNAME_S := $(shell uname -s)
 
@@ -45,8 +47,11 @@ $(LIB): $(LIB_OBJ)
 	ar r $@ $^
 	ranlib $@
 
-basic_disk_image: $(PROG)
-	./$(PROG) -i slink/testdisks/basicDiskImage
+TESTS = basic depthFile dirFnameSize
+
+$(TESTS): $(PROG)
+	./$(PROG) -i slink/testdisks/$@DiskImage > /tmp/output
+	$(DIFF) /tmp/output slink/testdisks/$@DiskImage.gold
 
 compile_commands.json:
 	compiledb make -Bn
@@ -55,5 +60,5 @@ clean::
 	rm -f $(PROG) $(PROG_OBJ) $(PROG_DEP)
 	rm -f $(LIB) $(LIB_DEP) $(LIB_OBJ)
 
-.PHONY: all clean compile_commands.json basic_disk_image
+.PHONY: all clean compile_commands.json $(TESTS)
 -include $(LIB_DEP) $(PROG_DEP)
