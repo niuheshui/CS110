@@ -9,7 +9,6 @@
  * If found, return the directory entry in space addressed by dirEnt.  Returns 0 
  * on success and something negative on failure. 
  */
-int directory_findname(struct unixfilesystem *fs, const char *name,
-                       int dirinumber, struct direntv6 *dirEnt);
+int directory_findname(struct unixfilesystem *fs, const char *name, int dirinumber, struct direntv6 *dirEnt);
 
 #endif // _DIECTORY_H_

@@ -1,8 +1,8 @@
 # CS110 Assignment 2 Makefile
 CC = gcc
 PROG =  diskimageaccess
-# DIFF = diff --color=always -u
-DIFF = qoder -d
+DIFF = diff --color=always -u
+# DIFF = qoder -d
 
 UNAME_S := $(shell uname -s)
 
