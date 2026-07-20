@@ -1,8 +1,8 @@
 # CS110 Assignment 2 Makefile
 CC = gcc
 PROG =  diskimageaccess
-DIFF = diff --color=always -u
-# DIFF = qoder -d
+# DIFF = diff --color=always -u
+DIFF = qoder -d
 
 UNAME_S := $(shell uname -s)
 
@@ -50,7 +50,7 @@ $(LIB): $(LIB_OBJ)
 TESTS = basic depthFile dirFnameSize
 
 $(TESTS): $(PROG)
-	./$(PROG) -i slink/testdisks/$@DiskImage > /tmp/output
+	./$(PROG) -ip slink/testdisks/$@DiskImage > /tmp/output 2>&1
 	$(DIFF) /tmp/output slink/testdisks/$@DiskImage.gold
 
 compile_commands.json:
