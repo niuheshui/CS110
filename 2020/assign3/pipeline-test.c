@@ -42,7 +42,7 @@ static void launchPipedExecutables(char *argv1[], char *argv2[]) {
 }
 
 static void simpleTest() {
-  char *argv1[] = {"cat", "/usr/include/tar.h", NULL};
+  char *argv1[] = {"cat", "/etc/bashrc", NULL};
   char *argv2[] = {"wc", NULL};
   launchPipedExecutables(argv1, argv2);
 }
